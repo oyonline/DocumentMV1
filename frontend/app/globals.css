@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Base typography & palette ---------- */
+@layer base {
+  :root {
+    --color-bg: #fafaf9;
+    --color-surface: #ffffff;
+    --color-text: #1c1917;
+    --color-text-secondary: #78716c;
+    --color-border: #e7e5e4;
+  }
+
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans;
+  }
+}
+
+/* ---------- Utility classes ---------- */
+@layer components {
+  .card {
+    @apply bg-white rounded-xl border border-stone-200 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-5 py-2.5
+           bg-brand-600 text-white font-medium rounded-lg
+           hover:bg-brand-700 active:bg-brand-800
+           transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-5 py-2.5
+           bg-white text-stone-700 font-medium rounded-lg
+           border border-stone-300
+           hover:bg-stone-50 active:bg-stone-100
+           transition-colors duration-150;
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-stone-300
+           bg-white text-stone-900 placeholder:text-stone-400
+           focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500
+           transition-shadow duration-150;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-stone-600 mb-1.5;
+  }
+}
