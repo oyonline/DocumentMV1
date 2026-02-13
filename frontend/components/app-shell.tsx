@@ -72,22 +72,22 @@ const NAV_ITEMS: NavItem[] = [
     match: (p) => p === "/dashboard",
   },
   {
-    label: "文档库",
-    href: "/docs",
+    label: "流程库",
+    href: "/flows",
     iconPath:
       "M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z",
-    match: (p, t) => p.startsWith("/docs") && !t,
+    match: (p, t) => p.startsWith("/flows") && !t,
   },
   {
     label: "共享给我",
-    href: "/docs?tab=shared",
+    href: "/flows?tab=shared",
     iconPath:
       "M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z",
     match: (_, t) => t === "shared",
   },
   {
-    label: "我的文档",
-    href: "/docs?tab=mine",
+    label: "我的流程",
+    href: "/flows?tab=mine",
     iconPath:
       "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z",
     match: (_, t) => t === "mine",
@@ -137,16 +137,16 @@ function SidebarContent({ onSignOut }: { onSignOut: () => void }) {
         </span>
       </div>
 
-      {/* New document button */}
+      {/* New flow button */}
       <div className="px-3 pb-4">
         <Link
-          href="/docs/new"
+          href="/flows/new"
           className="btn-primary w-full gap-1.5 text-sm"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          新建文档
+          新建流程
         </Link>
       </div>
 
@@ -211,7 +211,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <SidebarContent onSignOut={signOut} />
       </Suspense>
       <main className="flex-1 overflow-y-auto bg-[var(--color-bg)]">
-        <div className="mx-auto max-w-4xl px-8 py-8">{children}</div>
+        <div className="mx-auto max-w-7xl px-8 py-8">{children}</div>
       </main>
     </div>
   );

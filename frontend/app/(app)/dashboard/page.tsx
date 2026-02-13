@@ -2,29 +2,38 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listDocuments, getCurrentUserId, type Document } from "@/lib/api";
+import { listFlows, getCurrentUserId, type Flow, type FlowStatus } from "@/lib/api";
+
+const STATUS_LABEL: Record<FlowStatus, string> = {
+  DRAFT: "草稿",
+  IN_REVIEW: "评审中",
+  EFFECTIVE: "已生效",
+};
+const STATUS_COLOR: Record<FlowStatus, string> = {
+  DRAFT: "bg-stone-100 text-stone-600",
+  IN_REVIEW: "bg-amber-100 text-amber-700",
+  EFFECTIVE: "bg-emerald-100 text-emerald-700",
+};
 
 export default function DashboardPage() {
-  const [docs, setDocs] = useState<Document[]>([]);
+  const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
   const userId = getCurrentUserId();
 
   useEffect(() => {
-    listDocuments()
-      .then(setDocs)
-      .catch(() => {})
+    listFlows()
+      .then((data) => setFlows(Array.isArray(data) ? data : []))
+      .catch(() => setFlows([]))
       .finally(() => setLoading(false));
   }, []);
 
   // Defensive: API may resolve to null when Go returns nil slice
-  const docsArr = Array.isArray(docs) ? docs : [];
+  const flowsArr = Array.isArray(flows) ? flows : [];
 
-  const myDocs = docsArr.filter((d) => d.owner_id === userId);
-  const sharedDocs = docsArr.filter(
-    (d) => d.owner_id !== userId && d.visibility === "SHARED"
-  );
-  const publicDocs = docsArr.filter((d) => d.visibility === "PUBLIC");
-  const recent = [...docsArr]
+  const myFlows = flowsArr.filter((f) => f.owner_id === userId);
+  const sharedFlows = flowsArr.filter((f) => f.owner_id !== userId);
+  const effectiveFlows = flowsArr.filter((f) => f.status === "EFFECTIVE");
+  const recent = [...flowsArr]
     .sort(
       (a, b) =>
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
@@ -33,23 +42,23 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      label: "我的文档",
-      value: myDocs.length,
-      href: "/docs?tab=mine",
+      label: "我的流程",
+      value: myFlows.length,
+      href: "/flows?tab=mine",
       color: "text-brand-600",
       bg: "bg-brand-50",
     },
     {
       label: "共享给我",
-      value: sharedDocs.length,
-      href: "/docs?tab=shared",
+      value: sharedFlows.length,
+      href: "/flows?tab=shared",
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
-      label: "公开可见",
-      value: publicDocs.length,
-      href: "/docs",
+      label: "已生效",
+      value: effectiveFlows.length,
+      href: "/flows",
       color: "text-emerald-600",
       bg: "bg-emerald-50",
     },
@@ -61,13 +70,13 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-xl font-bold text-stone-900">工作台</h1>
         <p className="mt-1 text-sm text-stone-500">
-          欢迎回来，这是你的文档概览
+          欢迎回来，这是你的流程概览
         </p>
       </div>
 
       {/* Quick action */}
       <Link
-        href="/docs/new"
+        href="/flows/new"
         className="card mb-8 flex items-center gap-4 px-5 py-4 transition-shadow duration-150 hover:shadow-md group"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600 text-white transition-transform duration-150 group-hover:scale-105">
@@ -86,8 +95,8 @@ export default function DashboardPage() {
           </svg>
         </div>
         <div>
-          <p className="text-sm font-medium text-stone-900">新建文档</p>
-          <p className="text-xs text-stone-400">创建一篇新的文档</p>
+          <p className="text-sm font-medium text-stone-900">新建流程</p>
+          <p className="text-xs text-stone-400">创建一个新的流程草稿</p>
         </div>
       </Link>
 
@@ -111,12 +120,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent documents */}
+      {/* Recent flows */}
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-stone-900">最近更新</h2>
           <Link
-            href="/docs"
+            href="/flows"
             className="text-xs text-brand-600 hover:text-brand-700 transition-colors"
           >
             查看全部
@@ -134,25 +143,31 @@ export default function DashboardPage() {
           </div>
         ) : recent.length === 0 ? (
           <div className="card flex items-center justify-center py-12 text-sm text-stone-400">
-            暂无文档，点击上方按钮开始创建
+            暂无流程，点击上方按钮开始创建
           </div>
         ) : (
           <div className="space-y-2">
-            {recent.map((doc) => (
+            {recent.map((flow) => (
               <Link
-                key={doc.id}
-                href={`/docs/${doc.id}`}
+                key={flow.id}
+                href={`/flows/${flow.id}`}
                 className="card flex items-center justify-between px-5 py-3 transition-shadow duration-150 hover:shadow-md group"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-stone-900 group-hover:text-brand-600 transition-colors">
-                    {doc.title}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-stone-400 font-mono">
+                      {flow.flow_no}
+                    </span>
+                    <p className="truncate text-sm font-medium text-stone-900 group-hover:text-brand-600 transition-colors">
+                      {flow.title}
+                    </p>
+                  </div>
                   <p className="mt-0.5 text-xs text-stone-400">
-                    {new Date(doc.updated_at).toLocaleString("zh-CN")}
+                    {flow.owner_dept_id && `${flow.owner_dept_id} · `}
+                    {new Date(flow.updated_at).toLocaleString("zh-CN")}
                   </p>
                 </div>
-                <VisibilityBadge visibility={doc.visibility} />
+                <StatusBadge status={flow.status} />
               </Link>
             ))}
           </div>
@@ -163,28 +178,17 @@ export default function DashboardPage() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Shared badge (same style as docs list)                             */
+/*  Status badge                                                       */
 /* ------------------------------------------------------------------ */
 
-const VIS_LABEL: Record<string, string> = {
-  PRIVATE: "私有",
-  PUBLIC: "公开",
-  SHARED: "共享",
-};
-const VIS_COLOR: Record<string, string> = {
-  PRIVATE: "bg-stone-100 text-stone-600",
-  PUBLIC: "bg-emerald-50 text-emerald-700",
-  SHARED: "bg-blue-50 text-blue-700",
-};
-
-function VisibilityBadge({ visibility }: { visibility: string }) {
+function StatusBadge({ status }: { status: FlowStatus }) {
   return (
     <span
       className={`ml-3 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        VIS_COLOR[visibility] || "bg-stone-100 text-stone-600"
+        STATUS_COLOR[status] || "bg-stone-100 text-stone-600"
       }`}
     >
-      {VIS_LABEL[visibility] || visibility}
+      {STATUS_LABEL[status] || status}
     </span>
   );
 }

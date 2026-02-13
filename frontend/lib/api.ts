@@ -18,25 +18,52 @@ export interface AuthResult {
   user: { id: string; email: string; role: string; created_at: string };
 }
 
-export interface Document {
+// ---------- Flow types ----------
+
+export type FlowStatus = "DRAFT" | "IN_REVIEW" | "EFFECTIVE";
+
+export interface Flow {
   id: string;
-  owner_id: string;
+  flow_no: string;
   title: string;
-  visibility: "PRIVATE" | "PUBLIC" | "SHARED";
+  owner_id: string;
+  owner_dept_id: string;
+  overview: string;
+  status: FlowStatus;
+  diagram_json: string;
   latest_version_id?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface DocumentDetail {
-  document: Document;
-  content: string;
+export interface FlowNode {
+  id: string;
+  flow_id: string;
+  node_no: string;
+  name: string;
+  intro: string;
+  raci_json: string;
+  exec_form: string;
+  duration_min: number | null;
+  duration_max: number | null;
+  duration_unit: string;
+  prereq_text: string;
+  outputs_text: string;
+  subtasks_json: string;
+  sort_order: number;
 }
 
-export interface DocumentVersion {
+export interface FlowDetail {
+  flow: Flow;
+  nodes: FlowNode[];
+  total_duration_min_days: number;
+  total_duration_max_days: number;
+}
+
+export interface FlowVersion {
   id: string;
-  document_id: string;
-  content: string;
+  flow_id: string;
+  snapshot_json: string;
   created_by: string;
   created_at: string;
 }
@@ -83,7 +110,28 @@ async function request<T>(
   }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
-  const body: APIResponse<T> = await res.json();
+
+  // Use text() + JSON.parse() instead of json() for better diagnostics
+  const raw = await res.text();
+
+  let body: APIResponse<T>;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    // Log full diagnostics so we can identify the offending endpoint
+    if (process.env.NODE_ENV !== "production") {
+      console.error(
+        `[api] JSON parse failed: ${options.method || "GET"} ${path}`,
+        `| status=${res.status}`,
+        `| content-type=${res.headers.get("content-type")}`,
+        `| body(0..200)=${raw.slice(0, 200)}`
+      );
+    }
+    throw new APIError(
+      "PARSE_ERROR",
+      `接口返回了非 JSON 内容 (${options.method || "GET"} ${path}, status ${res.status})`
+    );
+  }
 
   if (body.error) {
     if (process.env.NODE_ENV === "development") {
@@ -138,39 +186,64 @@ export function getCurrentUserRole(): string | null {
   }
 }
 
-// ---------- Documents ----------
+// ---------- Flows ----------
 
-export async function listDocuments() {
-  return request<Document[]>("/docs");
+export async function listFlows() {
+  return request<Flow[]>("/flows");
 }
 
-export async function getDocument(id: string) {
-  return request<DocumentDetail>(`/docs/${id}`);
+export async function getFlowDetail(id: string) {
+  return request<FlowDetail>(`/flows/${id}`);
 }
 
-export async function createDocument(data: {
+export async function createFlow(data: {
   title: string;
-  content: string;
-  visibility: string;
+  owner_dept_id: string;
+  overview: string;
 }) {
-  return request<Document>("/docs", {
+  return request<Flow>("/flows", {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function updateDocument(
+export async function updateFlow(
   id: string,
-  data: { title: string; content: string; visibility: string }
+  data: {
+    title: string;
+    owner_dept_id: string;
+    overview: string;
+    diagram_json: string;
+    nodes: FlowNode[];
+  }
 ) {
-  return request<Document>(`/docs/${id}`, {
+  return request<Flow>(`/flows/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export async function listVersions(docId: string) {
-  return request<DocumentVersion[]>(`/docs/${docId}/versions`);
+export async function submitFlowReview(id: string) {
+  return request<Flow>(`/flows/${id}/submit_review`, {
+    method: "POST",
+  });
+}
+
+export async function publishFlow(id: string) {
+  return request<Flow>(`/flows/${id}/publish`, {
+    method: "POST",
+  });
+}
+
+export async function listFlowVersions(flowId: string) {
+  return request<FlowVersion[]>(`/flows/${flowId}/versions`);
+}
+
+export async function getFlowVersionDetail(
+  flowId: string,
+  versionId: string
+) {
+  return request<FlowVersion>(`/flows/${flowId}/versions/${versionId}`);
 }
 
 // ---------- Admin: User Management ----------

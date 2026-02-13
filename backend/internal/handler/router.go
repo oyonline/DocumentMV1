@@ -13,7 +13,7 @@ import (
 )
 
 // NewRouter builds the HTTP router with all routes and middleware.
-func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service.DocumentService, flowSvc *service.FlowService) http.Handler {
+func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service.DocumentService) http.Handler {
 	r := chi.NewRouter()
 
 	// ---------- Global middleware ----------
@@ -30,7 +30,7 @@ func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service
 	}))
 
 	authH := NewAuthHandler(authSvc)
-	docH := NewDocumentHandler(docSvc)
+	flowH := NewFlowHandler(flowSvc)
 	adminH := NewAdminHandler(authSvc)
 	flowH := NewFlowHandler(flowSvc)
 
@@ -45,23 +45,13 @@ func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service
 	r.Group(func(r chi.Router) {
 		r.Use(mw.Auth(cfg.JWTSecret))
 
-		// Document routes
+		// Document routes (unchanged)
 		r.Route("/api/docs", func(r chi.Router) {
 			r.Get("/", docH.List)
 			r.Post("/", docH.Create)
 			r.Get("/{id}", docH.GetDetail)
 			r.Put("/{id}", docH.Update)
 			r.Get("/{id}/versions", docH.ListVersions)
-
-			// Workflow node routes (nested under document)
-			r.Get("/{id}/nodes", flowH.ListNodes)
-			r.Post("/{id}/nodes", flowH.CreateNode)
-		})
-
-		// Workflow node routes (by node ID)
-		r.Route("/api/nodes", func(r chi.Router) {
-			r.Get("/{nodeId}", flowH.GetNode)
-			r.Put("/{nodeId}", flowH.UpdateNode)
 		})
 
 		// Admin routes (ADMIN role required)
