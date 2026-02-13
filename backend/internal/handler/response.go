@@ -92,3 +92,11 @@ func decodeJSON(r *http.Request, v interface{}) error {
 	}
 	return nil
 }
+
+func parseUUID(s string) (uuid.UUID, error) {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.UUID{}, domain.ErrInvalidInput
+	}
+	return id, nil
+}
