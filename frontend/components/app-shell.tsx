@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth, useRequireAuth } from "@/lib/auth";
+import { getCurrentUserRole } from "@/lib/api";
 
 /* ------------------------------------------------------------------ */
 /*  Icon helper                                                        */
@@ -58,6 +59,8 @@ interface NavItem {
   /** Custom icon (for multi-path SVGs) */
   customIcon?: boolean;
   match: (pathname: string, tab: string | null) => boolean;
+  /** If set, only visible to this role */
+  requireRole?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -90,6 +93,14 @@ const NAV_ITEMS: NavItem[] = [
     match: (_, t) => t === "mine",
   },
   {
+    label: "用户管理",
+    href: "/admin/users",
+    iconPath:
+      "M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z",
+    match: (p) => p.startsWith("/admin"),
+    requireRole: "ADMIN",
+  },
+  {
     label: "设置",
     href: "/settings",
     customIcon: true,
@@ -105,6 +116,12 @@ function SidebarContent({ onSignOut }: { onSignOut: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
+  const role = getCurrentUserRole();
+
+  // Filter nav items by role
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.requireRole || item.requireRole === role
+  );
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-stone-200 bg-white">
@@ -135,7 +152,7 @@ function SidebarContent({ onSignOut }: { onSignOut: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active = item.match(pathname, tab);
           return (
             <Link

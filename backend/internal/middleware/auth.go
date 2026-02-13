@@ -12,7 +12,10 @@ import (
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const (
+	UserIDKey contextKey = "userID"
+	RoleKey   contextKey = "userRole"
+)
 
 // UserIDFromCtx extracts the authenticated user ID from the request context.
 func UserIDFromCtx(ctx context.Context) (uuid.UUID, bool) {
@@ -20,7 +23,13 @@ func UserIDFromCtx(ctx context.Context) (uuid.UUID, bool) {
 	return v, ok
 }
 
-// Auth returns middleware that validates a Bearer JWT and sets user ID in context.
+// RoleFromCtx extracts the authenticated user role from the request context.
+func RoleFromCtx(ctx context.Context) string {
+	v, _ := ctx.Value(RoleKey).(string)
+	return v
+}
+
+// Auth returns middleware that validates a Bearer JWT and sets user ID + role in context.
 func Auth(secret string) func(http.Handler) http.Handler {
 	secretBytes := []byte(secret)
 	return func(next http.Handler) http.Handler {
@@ -61,8 +70,22 @@ func Auth(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
+			role, _ := claims["role"].(string)
+
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx = context.WithValue(ctx, RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// RequireAdmin rejects requests from non-ADMIN users with 403.
+func RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if RoleFromCtx(r.Context()) != "ADMIN" {
+			http.Error(w, `{"error":{"code":"FORBIDDEN","message":"admin access required"}}`, http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

@@ -31,23 +31,34 @@ func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service
 
 	authH := NewAuthHandler(authSvc)
 	docH := NewDocumentHandler(docSvc)
+	adminH := NewAdminHandler(authSvc)
 
 	// ---------- Public routes ----------
 	r.Route("/api/auth", func(r chi.Router) {
-		r.Post("/register", authH.Register)
 		r.Post("/login", authH.Login)
+		// Self-registration disabled: return 403 if hit
+		r.Post("/register", authH.Register)
 	})
 
 	// ---------- Protected routes ----------
 	r.Group(func(r chi.Router) {
 		r.Use(mw.Auth(cfg.JWTSecret))
 
+		// Document routes (unchanged)
 		r.Route("/api/docs", func(r chi.Router) {
 			r.Get("/", docH.List)
 			r.Post("/", docH.Create)
 			r.Get("/{id}", docH.GetDetail)
 			r.Put("/{id}", docH.Update)
 			r.Get("/{id}/versions", docH.ListVersions)
+		})
+
+		// Admin routes (ADMIN role required)
+		r.Route("/api/admin", func(r chi.Router) {
+			r.Use(mw.RequireAdmin)
+			r.Get("/users", adminH.ListUsers)
+			r.Post("/users", adminH.CreateUser)
+			r.Post("/users/{id}/reset_password", adminH.ResetPassword)
 		})
 	})
 

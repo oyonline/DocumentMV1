@@ -16,12 +16,15 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const myDocs = docs.filter((d) => d.owner_id === userId);
-  const sharedDocs = docs.filter(
+  // Defensive: API may resolve to null when Go returns nil slice
+  const docsArr = Array.isArray(docs) ? docs : [];
+
+  const myDocs = docsArr.filter((d) => d.owner_id === userId);
+  const sharedDocs = docsArr.filter(
     (d) => d.owner_id !== userId && d.visibility === "SHARED"
   );
-  const publicDocs = docs.filter((d) => d.visibility === "PUBLIC");
-  const recent = [...docs]
+  const publicDocs = docsArr.filter((d) => d.visibility === "PUBLIC");
+  const recent = [...docsArr]
     .sort(
       (a, b) =>
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()

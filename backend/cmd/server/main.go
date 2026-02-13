@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -16,7 +17,7 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	db, err := repository.NewDB(cfg.DatabaseURL)
+	db, err := repository.NewDB(cfg.DBDriver, cfg.DBDSN)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
@@ -31,10 +32,15 @@ func main() {
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret)
 	docSvc := service.NewDocumentService(db, docRepo, versionRepo)
 
+	// Seed default admin account
+	if err := authSvc.SeedAdmin(context.Background(), cfg.AdminEmail, cfg.AdminPassword); err != nil {
+		log.Fatalf("failed to seed admin: %v", err)
+	}
+
 	// Router
 	r := handler.NewRouter(cfg, authSvc, docSvc)
 
-	log.Printf("=== DocMV server starting on :%s ===", cfg.ServerPort)
+	log.Printf("=== DocMV server starting on :%s [%s] ===", cfg.ServerPort, cfg.DBDriver)
 	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}

@@ -13,12 +13,14 @@ import { useRouter } from "next/navigation";
 interface AuthState {
   loggedIn: boolean;
   loading: boolean;
+  signIn: () => void;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthState>({
   loggedIn: false,
   loading: true,
+  signIn: () => {},
   signOut: () => {},
 });
 
@@ -33,6 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  const signIn = useCallback(() => {
+    setLoggedIn(true);
+  }, []);
+
   const signOut = useCallback(() => {
     localStorage.removeItem("token");
     setLoggedIn(false);
@@ -40,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ loggedIn, loading, signOut }}>
+    <AuthContext.Provider value={{ loggedIn, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

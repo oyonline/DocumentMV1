@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { login, register } from "@/lib/api";
+import { login as apiLogin, isLoggedIn } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [isRegister, setIsRegister] = useState(false);
+  const { signIn, loggedIn, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already logged in → redirect to dashboard
+  useEffect(() => {
+    if (!authLoading && (loggedIn || isLoggedIn())) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, loggedIn, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,14 +26,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isRegister) {
-        await register(email, password);
-      } else {
-        await login(email, password);
-      }
-      router.push("/dashboard");
+      await apiLogin(email, password);
+      signIn(); // update auth context so AppShell sees loggedIn=true
+      router.replace("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "操作失败，请重试");
+      setError(err instanceof Error ? err.message : "登录失败，请重试");
     } finally {
       setLoading(false);
     }
@@ -40,7 +45,7 @@ export default function LoginPage() {
             DocMV
           </h1>
           <p className="mt-2 text-sm text-stone-500">
-            {isRegister ? "创建新账户" : "登录你的账户"}
+            登录你的账户
           </p>
         </div>
 
@@ -76,11 +81,10 @@ export default function LoginPage() {
               id="password"
               type="password"
               className="input"
-              placeholder={isRegister ? "至少 6 个字符" : "输入密码"}
+              placeholder="输入密码"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={isRegister ? 6 : undefined}
             />
           </div>
 
@@ -90,27 +94,14 @@ export default function LoginPage() {
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 处理中…
               </span>
-            ) : isRegister ? (
-              "注册"
             ) : (
               "登录"
             )}
           </button>
         </form>
 
-        {/* Toggle */}
-        <p className="mt-5 text-center text-sm text-stone-500">
-          {isRegister ? "已有账户？" : "还没有账户？"}{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsRegister(!isRegister);
-              setError("");
-            }}
-            className="font-medium text-brand-600 hover:text-brand-700 transition-colors"
-          >
-            {isRegister ? "去登录" : "去注册"}
-          </button>
+        <p className="mt-5 text-center text-xs text-stone-400">
+          账号由管理员创建，如需帮助请联系管理员
         </p>
       </div>
     </div>

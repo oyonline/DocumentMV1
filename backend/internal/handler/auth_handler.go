@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"docmv/internal/domain"
 	"docmv/internal/service"
 )
 
@@ -19,21 +20,10 @@ type authRequest struct {
 	Password string `json:"password"`
 }
 
-// Register handles POST /api/auth/register
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req authRequest
-	if err := decodeJSON(r, &req); err != nil {
-		respondError(w, err)
-		return
-	}
-
-	result, err := h.authSvc.Register(r.Context(), req.Email, req.Password)
-	if err != nil {
-		respondError(w, err)
-		return
-	}
-
-	respondCreated(w, result)
+// Register is disabled — self-registration is not allowed.
+// Kept as a handler to return a clear 403 if someone hits the old endpoint.
+func (h *AuthHandler) Register(w http.ResponseWriter, _ *http.Request) {
+	respondError(w, domain.ErrForbidden)
 }
 
 // Login handles POST /api/auth/login

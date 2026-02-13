@@ -15,7 +15,7 @@ export interface APIResponse<T> {
 
 export interface AuthResult {
   token: string;
-  user: { id: string; email: string; created_at: string };
+  user: { id: string; email: string; role: string; created_at: string };
 }
 
 export interface Document {
@@ -38,6 +38,13 @@ export interface DocumentVersion {
   document_id: string;
   content: string;
   created_by: string;
+  created_at: string;
+}
+
+export interface UserInfo {
+  id: string;
+  email: string;
+  role: string;
   created_at: string;
 }
 
@@ -91,15 +98,6 @@ export async function login(email: string, password: string) {
   return result;
 }
 
-export async function register(email: string, password: string) {
-  const result = await request<AuthResult>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-  localStorage.setItem("token", result.token);
-  return result;
-}
-
 export function logout() {
   localStorage.removeItem("token");
 }
@@ -115,6 +113,18 @@ export function getCurrentUserId(): string | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
     return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Decode JWT payload to extract current user role (no verification). */
+export function getCurrentUserRole(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.role || null;
   } catch {
     return null;
   }
@@ -153,4 +163,28 @@ export async function updateDocument(
 
 export async function listVersions(docId: string) {
   return request<DocumentVersion[]>(`/docs/${docId}/versions`);
+}
+
+// ---------- Admin: User Management ----------
+
+export async function listUsers() {
+  return request<UserInfo[]>("/admin/users");
+}
+
+export async function createUser(data: {
+  email: string;
+  password: string;
+  role?: string;
+}) {
+  return request<UserInfo>("/admin/users", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function resetUserPassword(userId: string, password: string) {
+  return request<{ status: string }>(`/admin/users/${userId}/reset_password`, {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
 }
