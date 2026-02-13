@@ -9,7 +9,7 @@ const BASE = "/api";
 
 export interface APIResponse<T> {
   data?: T;
-  error?: { code: string; message: string };
+  error?: { code: string; message: string; fields?: Record<string, string> };
   request_id: string;
 }
 
@@ -50,11 +50,16 @@ export interface UserInfo {
 
 // ---------- Helpers ----------
 
-class APIError extends Error {
+export class APIError extends Error {
   code: string;
-  constructor(code: string, message: string) {
+  fields?: Record<string, string>;
+  requestId?: string;
+
+  constructor(code: string, message: string, fields?: Record<string, string>, requestId?: string) {
     super(message);
     this.code = code;
+    this.fields = fields;
+    this.requestId = requestId;
     this.name = "APIError";
   }
 }
@@ -81,7 +86,10 @@ async function request<T>(
   const body: APIResponse<T> = await res.json();
 
   if (body.error) {
-    throw new APIError(body.error.code, body.error.message);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[API Error]", { request_id: body.request_id, fields: body.error.fields });
+    }
+    throw new APIError(body.error.code, body.error.message, body.error.fields, body.request_id);
   }
 
   return body.data as T;
@@ -186,5 +194,74 @@ export async function resetUserPassword(userId: string, password: string) {
   return request<{ status: string }>(`/admin/users/${userId}/reset_password`, {
     method: "POST",
     body: JSON.stringify({ password }),
+  });
+}
+
+// ---------- Workflow Nodes ----------
+
+export interface RACI {
+  R: string[];
+  A: string[];
+  S: string[];
+  C: string[];
+  I: string[];
+}
+
+export interface DiagramJSON {
+  nodes: unknown[];
+  edges: unknown[];
+}
+
+export interface WorkflowNode {
+  id: string;
+  document_id: string;
+  name: string;
+  exec_form: string;
+  description: string;
+  preconditions: string;
+  outputs: string;
+  duration_min: number | null;
+  duration_max: number | null;
+  duration_unit: string;
+  raci: RACI;
+  subtasks: string[];
+  diagram_json: DiagramJSON;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NodeInput {
+  name: string;
+  exec_form: string;
+  description: string;
+  preconditions: string;
+  outputs: string;
+  duration_min: number | null;
+  duration_max: number | null;
+  duration_unit: string;
+  raci: RACI;
+  subtasks: string[];
+  diagram_json: DiagramJSON;
+}
+
+export async function listNodes(docId: string) {
+  return request<WorkflowNode[]>(`/docs/${docId}/nodes`);
+}
+
+export async function createNode(docId: string, data: NodeInput) {
+  return request<WorkflowNode>(`/docs/${docId}/nodes`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getNode(nodeId: string) {
+  return request<WorkflowNode>(`/nodes/${nodeId}`);
+}
+
+export async function updateNode(nodeId: string, data: NodeInput) {
+  return request<WorkflowNode>(`/nodes/${nodeId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 }
