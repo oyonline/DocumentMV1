@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"docmv/internal/domain"
@@ -18,9 +19,11 @@ type APIResponse struct {
 }
 
 // APIError carries a machine-readable code and human-readable message.
+// Fields is populated when validation fails, mapping field names to error reasons.
 type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string            `json:"code"`
+	Message string            `json:"message"`
+	Fields  map[string]string `json:"fields,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
@@ -45,9 +48,20 @@ func respondCreated(w http.ResponseWriter, data interface{}) {
 
 func respondError(w http.ResponseWriter, err error) {
 	code, status := mapError(err)
+	reqID := newRequestID()
+
+	apiErr := &APIError{Code: code, Message: err.Error()}
+
+	// Extract field-level errors from ValidationError
+	var ve *domain.ValidationError
+	if errors.As(err, &ve) {
+		apiErr.Fields = ve.Fields
+		log.Printf("[%s] validation failed: %v", reqID, ve.Fields)
+	}
+
 	writeJSON(w, status, APIResponse{
-		Error:     &APIError{Code: code, Message: err.Error()},
-		RequestID: newRequestID(),
+		Error:     apiErr,
+		RequestID: reqID,
 	})
 }
 
