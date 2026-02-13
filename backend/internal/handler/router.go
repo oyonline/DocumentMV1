@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
+	"runtime/debug"
 
 	"docmv/internal/config"
 	mw "docmv/internal/middleware"
@@ -10,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 )
 
 // NewRouter builds the HTTP router with all routes and middleware.
@@ -17,7 +21,7 @@ func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service
 	r := chi.NewRouter()
 
 	// ---------- Global middleware ----------
-	r.Use(chimw.Recoverer)
+	r.Use(jsonRecoverer)
 	r.Use(chimw.RealIP)
 	r.Use(mw.RequestLogger)
 	r.Use(cors.Handler(cors.Options{
@@ -79,4 +83,25 @@ func NewRouter(cfg *config.Config, authSvc *service.AuthService, docSvc *service
 	})
 
 	return r
+}
+
+// jsonRecoverer catches panics and returns a JSON error instead of plain text.
+// Replaces chimw.Recoverer which returns "Internal Server Error" as text/plain.
+func jsonRecoverer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rv := recover(); rv != nil {
+				reqID := uuid.New().String()[:8]
+				log.Printf("[%s] PANIC: %v\n%s", reqID, rv, debug.Stack())
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(APIResponse{ //nolint:errcheck
+					Error:     &APIError{Code: "INTERNAL_SERVER_ERROR", Message: "internal server error"},
+					RequestID: reqID,
+				})
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }

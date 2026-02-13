@@ -83,6 +83,17 @@ async function request<T>(
   }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
+
+  // Guard: if response is not JSON, throw with the raw text so the user sees something useful
+  const contentType = res.headers.get("Content-Type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text();
+    throw new APIError(
+      "UNEXPECTED_RESPONSE",
+      text.trim() || `请求失败 (HTTP ${res.status})`,
+    );
+  }
+
   const body: APIResponse<T> = await res.json();
 
   if (body.error) {
