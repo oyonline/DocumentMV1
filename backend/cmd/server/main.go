@@ -23,14 +23,21 @@ func main() {
 	}
 	defer db.Close()
 
+	// Auto-migrate: create tables/columns if they don't exist
+	if err := repository.AutoMigrate(db, cfg.DBDriver); err != nil {
+		log.Fatalf("auto-migration failed: %v", err)
+	}
+
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
 	docRepo := repository.NewDocumentRepo(db)
 	versionRepo := repository.NewVersionRepo(db)
+	flowRepo := repository.NewFlowRepo(db)
 
 	// Services
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret)
 	docSvc := service.NewDocumentService(db, docRepo, versionRepo)
+	flowSvc := service.NewFlowService(db, flowRepo, docRepo)
 
 	// Seed default admin account
 	if err := authSvc.SeedAdmin(context.Background(), cfg.AdminEmail, cfg.AdminPassword); err != nil {
@@ -38,7 +45,7 @@ func main() {
 	}
 
 	// Router
-	r := handler.NewRouter(cfg, authSvc, docSvc)
+	r := handler.NewRouter(cfg, authSvc, docSvc, flowSvc)
 
 	log.Printf("=== DocMV server starting on :%s [%s] ===", cfg.ServerPort, cfg.DBDriver)
 	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {
