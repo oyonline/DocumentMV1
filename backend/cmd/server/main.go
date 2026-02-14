@@ -23,6 +23,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// Auto-migrate: create tables/columns if they don't exist
+	if err := repository.AutoMigrate(db, cfg.DBDriver); err != nil {
+		log.Fatalf("auto-migration failed: %v", err)
+	}
+
 	// Repositories
 	userRepo := repository.NewUserRepo(db)
 	docRepo := repository.NewDocumentRepo(db)
