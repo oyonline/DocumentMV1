@@ -8,23 +8,21 @@ import (
 
 // ---------- Enums ----------
 
-type FlowStatus string
+type Visibility string
 
 const (
-	FlowStatusDraft    FlowStatus = "DRAFT"
-	FlowStatusInReview FlowStatus = "IN_REVIEW"
-	FlowStatusEffective FlowStatus = "EFFECTIVE"
+	VisibilityPrivate Visibility = "PRIVATE"
+	VisibilityPublic  Visibility = "PUBLIC"
+	VisibilityShared  Visibility = "SHARED"
 )
 
-type ExecForm string
-
-const (
-	ExecFormSystemApproval  ExecForm = "SYSTEM_APPROVAL"
-	ExecFormOfflineMeeting  ExecForm = "OFFLINE_MEETING"
-	ExecFormEmailConfirm    ExecForm = "EMAIL_CONFIRM"
-	ExecFormDocReview       ExecForm = "DOC_REVIEW"
-	ExecFormSystemOperation ExecForm = "SYSTEM_OPERATION"
-)
+func (v Visibility) Valid() bool {
+	switch v {
+	case VisibilityPrivate, VisibilityPublic, VisibilityShared:
+		return true
+	}
+	return false
+}
 
 type ShareRole string
 
@@ -50,51 +48,28 @@ type User struct {
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }
 
-type Flow struct {
+type Document struct {
 	ID              uuid.UUID  `db:"id" json:"id"`
-	FlowNo          string     `db:"flow_no" json:"flow_no"`
-	Title           string     `db:"title" json:"title"`
 	OwnerID         uuid.UUID  `db:"owner_id" json:"owner_id"`
-	OwnerDeptID     string     `db:"owner_dept_id" json:"owner_dept_id"`
-	Overview        string     `db:"overview" json:"overview"`
-	Status          FlowStatus `db:"status" json:"status"`
-	DiagramJSON     string     `db:"diagram_json" json:"diagram_json"`
+	Title           string     `db:"title" json:"title"`
+	Visibility      Visibility `db:"visibility" json:"visibility"`
 	LatestVersionID *uuid.UUID `db:"latest_version_id" json:"latest_version_id,omitempty"`
 	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 }
 
-type FlowNode struct {
-	ID           uuid.UUID `db:"id" json:"id"`
-	FlowID       uuid.UUID `db:"flow_id" json:"flow_id"`
-	NodeNo       string    `db:"node_no" json:"node_no"`
-	Name         string    `db:"name" json:"name"`
-	Intro        string    `db:"intro" json:"intro"`
-	RACIJSON     string    `db:"raci_json" json:"raci_json"`
-	ExecForm     string    `db:"exec_form" json:"exec_form"`
-	DurationMin  *float64  `db:"duration_min" json:"duration_min"`
-	DurationMax  *float64  `db:"duration_max" json:"duration_max"`
-	DurationUnit string    `db:"duration_unit" json:"duration_unit"`
-	PrereqText   string    `db:"prereq_text" json:"prereq_text"`
-	OutputsText  string    `db:"outputs_text" json:"outputs_text"`
-	SubtasksJSON string    `db:"subtasks_json" json:"subtasks_json"`
-	SortOrder    int       `db:"sort_order" json:"sort_order"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+type DocumentVersion struct {
+	ID         uuid.UUID `db:"id" json:"id"`
+	DocumentID uuid.UUID `db:"document_id" json:"document_id"`
+	Content    string    `db:"content" json:"content"`
+	CreatedBy  uuid.UUID `db:"created_by" json:"created_by"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 }
 
-type FlowVersion struct {
-	ID           uuid.UUID `db:"id" json:"id"`
-	FlowID       uuid.UUID `db:"flow_id" json:"flow_id"`
-	SnapshotJSON string    `db:"snapshot_json" json:"snapshot_json"`
-	CreatedBy    uuid.UUID `db:"created_by" json:"created_by"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-}
-
-type FlowShare struct {
-	ID        uuid.UUID `db:"id" json:"id"`
-	FlowID    uuid.UUID `db:"flow_id" json:"flow_id"`
-	UserID    uuid.UUID `db:"user_id" json:"user_id"`
-	Role      ShareRole `db:"role" json:"role"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
+type DocumentShare struct {
+	ID         uuid.UUID `db:"id" json:"id"`
+	DocumentID uuid.UUID `db:"document_id" json:"document_id"`
+	UserID     uuid.UUID `db:"user_id" json:"user_id"`
+	Role       ShareRole `db:"role" json:"role"`
+	CreatedAt  time.Time `db:"created_at" json:"created_at"`
 }
